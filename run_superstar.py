@@ -25,12 +25,12 @@ from ccdc.utilities import Grid
 import subprocess
 
 
-class RunSuperstar:
+class RunSuperstar(object):
     """
     class to handle SuperStar run
     """
 
-    class Settings:
+    class Settings(object):
         """
         setting for Superstar run
         """
@@ -39,6 +39,7 @@ class RunSuperstar:
             self.probename = None
             self.moleculefile = None
             self.cavity_origin = None
+
             self.occulsionthreshold = 5
             self.mapbackgroundvalue = 1
             self.boxborder = 10
@@ -50,7 +51,7 @@ class RunSuperstar:
     def __init__(self, **kw):
         settings = kw.get('settings')
         if settings is None:
-            settings = self.Settings
+            settings = self.Settings()
         self.settings = settings
 
         main_dir = os.environ.get('MAINDIR')
@@ -81,7 +82,6 @@ class RunSuperstar:
                 SUPERSTAR_ROOT=str(os.path.join(os.path.dirname(io.csd_directory()), "Mercury"))
             )
         self.settings.working_directory = utilities._test_output_dir()
-        print "WKDIR", " ", self.settings.working_directory
 
     def _append_cavity_info(self):
         """
@@ -133,7 +133,7 @@ class RunSuperstar:
         return SuperstarResult(self.settings)
 
 
-class SuperstarResult:
+class SuperstarResult(object):
     """
     stores a superstar result
     """
