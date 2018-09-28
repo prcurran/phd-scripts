@@ -1,6 +1,6 @@
 from ccdc.utilities import Grid
 from inferno import inferno_data
-
+from os.path import join
 
 class GridPoint(object):
     """
@@ -81,9 +81,10 @@ cmd.set("transparency", 0.2, "surface")'''
 
 
 def main():
-    grd = Grid.from_file("apolar.grd")
+    out_dir = "Z://fragment-hotspot-results//patel_set//2//out"
+    grd = Grid.from_file(join(out_dir, "apolar.grd"))
     nx, ny, nz = grd.nsteps
-    fname = "test_output.py"
+    fname = join(out_dir, "inferno_gradient.py")
     header(fname)
     string_list = ""
 
