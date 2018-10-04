@@ -21,7 +21,7 @@ class Runner(argparse.ArgumentParser):
             help='pdb file path'
         )
         self.add_argument(
-            'ghecom_executable',
+            '-g', '--ghecom_executable',
             default=None,
             help='path to ghecom executable, if None, Ligsite will be used'
         )
@@ -31,18 +31,20 @@ class Runner(argparse.ArgumentParser):
         self.out_dir = join(self.in_dir, "out")
 
     def prepare_protein(self):
-        """"""
+        """default protein preparation settings on the protein"""
         self.prot = Protein.from_file(self.args.prot_fname)
         self.prot.remove_all_waters()
         for lig in self.prot.ligands:
             self.prot.remove_ligand(lig.identifier)
         self.prot.remove_all_metals()
 
-    def run(self, prepare=True):
-        """"""
+    def run(self, prepare=False):
+        """from fragment hotspot calc from protein"""
         h = Hotspots()
         if prepare:
             self.prepare_protein()
+        else:
+            self.prot = Protein.from_file(self.args.prot_fname)
 
         h.out_dir = self.out_dir
         result = h.from_protein(prot=self.prot,
@@ -73,6 +75,10 @@ class Runner(argparse.ArgumentParser):
             hr.pharmacophore.out_dir = out
             hr.pharmacophore.write(join(out, "pharmacophore.json"))
 
-if __name__ == "__main__":
+def main():
     r = Runner()
     r.run()
+
+if __name__ == "__main__":
+    main()
+
