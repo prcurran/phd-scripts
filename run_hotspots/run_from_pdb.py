@@ -36,13 +36,13 @@ class Organiser(argparse.ArgumentParser):
         """from fragment hotspot calc from protein"""
         h = Runner()
         settings = Runner.Settings(sphere_maps=False)
-        result = h.from_pdb(pdb=self.args.pdb,
+        result = h.from_pdb(pdb_code=self.args.pdb,
                             charged_probes=True,
                             buriedness_method=self.args.buriedness_method,
                             nprocesses=5,
                             settings=settings)
 
-        with HotspotWriter(path=self.in_dir, zip_results=self.args.zipped) as writer:
+        with HotspotWriter(path=self.args.out_dir, zip_results=self.args.zipped) as writer:
             writer.write(result)
 
 

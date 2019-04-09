@@ -34,6 +34,7 @@ class RunSuperstar(object):
         """
         setting for Superstar run
         """
+
         def __init__(self):
             self.jobname = None
             self.probename = None
@@ -76,7 +77,8 @@ class RunSuperstar(object):
                     os.path.dirname(io.csd_directory()), 'mercury.app', 'Contents', 'MacOS', 'superstar'
                 )
             else:
-                self.settings._superstar_executable = os.path.join(os.path.dirname(io.csd_directory()), 'bin', 'superstar')
+                self.settings._superstar_executable = os.path.join(os.path.dirname(io.csd_directory()), 'bin',
+                                                                   'superstar')
             self.settings._superstar_env = dict(
                 SUPERSTAR_ISODIR=str(os.path.join(os.path.dirname(io.csd_directory()), 'isostar_files', 'istr')),
                 SUPERSTAR_ROOT=str(os.path.join(os.path.dirname(io.csd_directory()), "Mercury"))
@@ -150,13 +152,13 @@ class SuperstarResult(object):
             raise AttributeError('{} superstar grid could not be found'.format(self.identifier))
 
         ligsitepath = os.path.join(self.settings.working_directory, self.identifier + ".ins.ligsite.acnt")
-        if os.path.exists(gridpath):
-            self.grid = Grid.from_file(ligsitepath)
+        if os.path.exists(ligsitepath):
+            self.ligsite = Grid.from_file(ligsitepath)
         else:
             raise AttributeError('{} ligsite grid could not be found'.format(self.identifier))
 
 
-def _run_ss(prot, out_dir, centroid = None, charged_probes=True):
+def _run_ss(prot, out_dir, centroid=None, charged_probes=True):
     """
     initiates a SuperStar run for a given protein and probe
 
@@ -193,6 +195,7 @@ def _run_ss(prot, out_dir, centroid = None, charged_probes=True):
             result = s.run_superstar(prot, out_dir)
             sites.append(result)
     return sites
+
 
 if __name__ == "__main__":
     prot = Protein.from_file("protein.pdb")

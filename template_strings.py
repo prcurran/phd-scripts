@@ -1,5 +1,5 @@
 def superstar_ins(settings):
-    ss_str = '''JOBNAME {0}
+    ss_str = '''JOBNAME ins/{0}
 PROBENAME {1}
 GRID_SPACING 0.5
 CALC_CONTOUR_SURFACE 0

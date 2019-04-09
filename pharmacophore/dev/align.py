@@ -37,13 +37,13 @@ def codes_from_filename(struc, mypath, mylist):
             mylist.append(head)
 
 #input##################################################################################################################
-align_to = "1aq1"
-target = "CDK2"
+align_to = "1drf"
+target = "DHFR"
 ########################################################################################################################
 
 pdb_codes = []
-in_dir = "C:/Users/pcurran/Desktop/paper1/{}/input".format(target)
-out_dir = "C:/Users/pcurran/Desktop/paper1/{}/output".format(target)
+in_dir = "Z:/fragment-hotspot-results/patel_set/{}/{}/gold_standard/input".format(target, align_to)
+out_dir = "Z:/fragment-hotspot-results/patel_set/{}/{}/gold_standard/output".format(target, align_to)
 codes_from_filename(align_to, in_dir, pdb_codes)
 
 print pdb_codes

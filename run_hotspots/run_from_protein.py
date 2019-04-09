@@ -54,26 +54,26 @@ class Organiser(argparse.ArgumentParser):
         for lig in self.prot.ligands:
             self.prot.remove_ligand(lig.identifier)
         self.prot.remove_all_metals()
-        if self.args.remove_waters:
+        if self.args.remove_waters is True:
             self.prot.remove_all_waters()
 
     def run(self, cavity=True):
         """from fragment hotspot calc from protein"""
         h = Runner()
         settings = Runner.Settings(sphere_maps=False)
-        if self.args.prepare:
+        if self.args.prepare is True:
             self.prepare_protein()
         else:
             self.prot = Protein.from_file(self.args.prot_fname)
 
-        if cavity:
+        if cavity is True:
             cavs = Cavity.from_pdb_file(self.args.prot_fname)
             print(cavs)
         else:
             cavs = None
 
         result = h.from_protein(protein=self.prot,
-                                charged_probes=True,
+                                charged_probes=False,
                                 buriedness_method=self.args.buriedness_method,
                                 cavities=cavs,
                                 nprocesses=5,
@@ -85,7 +85,7 @@ class Organiser(argparse.ArgumentParser):
 
 def main():
     r = Organiser()
-    r.run()
+    r.run(cavity=False)
 
 
 if __name__ == "__main__":

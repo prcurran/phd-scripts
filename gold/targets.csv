@@ -1,0 +1,8 @@
+index,gene ID,PDB,description,target class
+1,AA2AR,3eml,Adenosine A2a receptor,GPCR
+44,GRIK1,1vso,Glutamate receptor ionotropic kainate 1,Ion Channel
+68,MK14,2qd9,MAP kinase p38 alpha,Kinase
+102,XIAP,3hl5,Inhibitor of apoptosis protein 3,Misc
+31,ESR1,1sj0,Estrogen receptor alpha,Nuclear Receptor
+85,PUR2,1njs,GAR transformylase,Enzyme
+27,DPP4,2i78,Dipeptidyl peptidase IV,Protease
