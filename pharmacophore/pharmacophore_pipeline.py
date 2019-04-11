@@ -43,8 +43,9 @@ class GetHotspots(luigi.Task):
         s.polar_translation_threshold = 15
         s.polar_contributions = False
         s.nrotations = 3000
+        s.sphere_maps = True
 
-        hr = h.from_pdb(pdb_code=self.pdb, charged_probes=False, buriedness_method='ghecom', nprocesses=1,
+        hr = h.from_pdb(pdb_code=self.pdb, charged_probes=False, buriedness_method='ghecom', nprocesses=3,
                         settings=s, cavities=None)
 
         out_settings = HotspotWriter.Settings()
@@ -72,12 +73,11 @@ class GetBestVolume(luigi.Task):
         hs = HotspotReader(self.input().path).read()
 
         settings = Extractor.Settings()
-        settings.pharmacophore = False
         settings.cutoff = 12
-        settings.mvon = True
+        settings.mvon = False
 
-        extractor = Extractor(hs)
-        best = extractor.extract_best_volume(volume=250)[0]
+        extractor = Extractor(hs, settings)
+        best = extractor.extract_best_volume(volume=100)[0]
 
         out_settings = HotspotWriter.Settings()
         out_settings.charged = False
@@ -324,22 +324,26 @@ class LotsOTasks(luigi.WrapperTask):
 
         base = "/home/pcurran/patel"
 
-        targets = {"CDK2": ["1hcl", "1aq1"],
-                   "DHFR": ["1drf", "2w9t"],
-                   "Thrombin": ["1c4v", "1vr1"],
-                   "HIVRT": ["1tvr", "1dlo"],
-                   "A2Ar": ["2ydo"]}
+        ### TEST
+        targets = {"CDK2": ["1aq1"]}
+        chains = {"1aq1": "A"}
 
-        chains = {"1hcl": "A",
-                  "1aq1": "A",
-                  "1drf": "A",
-                  "2w9t": "A",
-                  "1c4v": "2",
-                  "1vr1": "H",
-                  "1tvr": "A",
-                  "1dlo": "A",
-                  "2ydo": "A",
-                  }
+        # targets = {"CDK2": ["1hcl", "1aq1"],
+        #            "DHFR": ["1drf", "2w9t"],
+        #            "Thrombin": ["1c4v", "1vr1"],
+        #            "HIVRT": ["1tvr", "1dlo"],
+        #            "A2Ar": ["2ydo"]}
+
+        # chains = {"1hcl": "A",
+        #           "1aq1": "A",
+        #           "1drf": "A",
+        #           "2w9t": "A",
+        #           "1c4v": "2",
+        #           "1vr1": "H",
+        #           "1tvr": "A",
+        #           "1dlo": "A",
+        #           "2ydo": "A",
+        #           }
 
         for target, pdbs in targets.items():
             for pdb in pdbs:
