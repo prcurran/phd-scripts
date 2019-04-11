@@ -10,15 +10,37 @@ This script wraps around the Protein Plus web services
     Journal of Chemical Information and Modeling, 55(8):1747-1756.
 
 """
-import shlex, subprocess, ast, time, json, os, csv, re
-
-import urllib2
-import urlparse
+import shlex, subprocess, ast, time, json, os, csv, re, urllib2, urlparse, tempfile
 from collections import OrderedDict
+import numba
+
+
+@numba.njit()
+def tanimoto_dist(a, b):
+    """
+    calculate the tanimoto distance between two fingerprint arrays
+    :param a:
+    :param b:
+    :return:
+    """
+    dotprod = np.dot(a, b)
+    tc = dotprod / (np.sum(a) + np.sum(b) - dotprod)
+    return 1.0 - tc
 
 
 class Ensemble(object):
     """
+    Object containing data on the Ensemble members for a particular target
+
+    Outputted data:
+
+        - result_table - main result, binding site ensemble with different conformations of the same/closely
+        related binding sites found in the PDB (CSV-table, one PDB-entry per row)
+        - pdb_files - alternative conformations of binding site from the PDB (list of PDB-files)
+        - ligands - ligands at the binding site of the alternative conformations (list of SDF-files,
+        positions match the PDB entries in the pdb_files-list)
+        - alignment - shows positions in the different chains of the found PDB-entries that can be aligned (TXT-file)
+        - parameters - the values of parameters used for this request
 
     """
     def __init__(self, data):
@@ -27,10 +49,10 @@ class Ensemble(object):
 
     def _write(self, url, out_dir):
         """
+        handles writing all the data
 
-        :param url:
-        :param out_dir:
-        :return:
+        :param str url: url for aligned files
+        :param str out_dir: path of output directory
         """
         print url
         url = re.sub('/esults/', '/results/', url)              # fix url
@@ -67,17 +89,106 @@ class Ensemble(object):
             else:
                 self._write(urls, new_out_dir)
 
+    @staticmethod
+    def _cluster_ligands(ligands, t):
+        """
+
+        :return:
+        """
+        def fingerprint_array(ligands):
+            X =[]
+            for l in ligands:
+                arr = np.zeros((0,))
+                fp = AllChem.GetMorganFingerprintAsBitVect(l, 2)
+                DataStructs.ConvertToNumpyArray(fp, arr)
+                X.append(arr)
+            return X
+
+        cluster_dic = {}
+
+        # generate fingerprint array
+        X = fingerprint_array(ligands)
+        if len(X) < 2:
+            X = fingerprint_array(ligands)
+            if len(X) < 2:
+                raise ValueError("Fingerprint array must contain more than 1 entry")
+
+        # dimensionality reduction
+        tsne_X = TSNE(n_components=2, metric=tanimoto_dist).fit_transform(np.array(X, dtype=np.float32))
+
+        # clustering
+        cluster_tsne = hdbscan.HDBSCAN(min_cluster_size=2, gen_min_span_tree=True)
+        cluster_tsne.fit(tsne_X)
+
+        for i, label in enumerate(cluster_tsne.labels_):
+            if label == -1:
+                continue
+            else:
+                if label in cluster_dic:
+                    cluster_dic[label].append(ligands[i])
+                else:
+                    cluster_dic.update({label: [ligands[i]]})
+
+        x = [tsne_X.T[0][j] for j, l in enumerate(cluster_tsne.labels_) if l != -1]
+        y = [tsne_X.T[1][j] for j, l in enumerate(cluster_tsne.labels_) if l != -1]
+        hue = [l for j, l in enumerate(cluster_tsne.labels_) if l != -1]
+
+        plt.scatter(x, y, c=hue, cmap='RdBu')
+
+        plt.title("{} clusters".format(t))
+        plt.savefig("{}.png".format(t))
+        plt.close()
+        if len(cluster_dic) == 0:
+            print("NO CLUSTERS FOUND")
+            cluster_dic = {i: [ligands[i]] for i in range(0, len(ligands))}
+
+        return cluster_dic
+
+    def select_diverse_ligands(self, target):
+        """
+
+
+        :return:
+        """
+        # download ligands
+        # convert to fps
+        # cluster on ligands
+        # update data to only include selected members
+        tmp = tempfile.mkdtemp()
+        ligands = self.data['ligands']
+        for ligand in ligands:
+            self._write(ligand, tmp)
+
+        files = [os.path.join(tmp, f) for f in os.listdir(tmp) if os.isfile(os.path.join(tmp, f))]
+        ligands = {os.path.basename(f).split(".")[0]: x
+                   for f in files for x in Chem.ForwardSDMolSupplier(f) if x is not None}
+
+        for n, l in ligands.items():
+            l.SetProp("_Name", n)
+
+        cluster_dict = self._cluster_ligands(ligands=ligands, t=target)
+        reps = [l[0] for l in cluster_dict.values() if len(l) != 0]
+
+        print reps
+
+
+
+
+
 
 class Search(object):
     """
-    two parts
+    post request to initiate job
+    get request to retrieve data (iteratively until the job has complete)
 
+    >>> searcher = Search()
+    >>> ensemble = searcher.create_ensemble(pdb_code="1aq1",
+                                        ligand="STU_A_299",
+                                        reduction_procedure="",
+                                        num_members="")
 
-    :param pdb_code:
-    :param ligand:
-    :param mode:
-    :param data_reduction:
-    :param settings:
+    >>> ensemble.save(out_dir = "/home/pcurran/patel/CDK2/1aq1_ensemble")
+
     """
     class Settings(object):
         """
@@ -86,6 +197,7 @@ class Search(object):
         """
         def __init__(self):
             self.url = 'https://proteins.plus/api/siena_rest'
+
             self.data = {"reduction_procedure":"",
                          "siena": {"bb_clustering":"",
                                    "all_atom_clustering":"",
@@ -114,15 +226,11 @@ class Search(object):
                                    }
                          }
 
-
     def __init__(self, settings=None):
         """
+        Search initialisation
 
-        :param pdb_code:
-        :param ligand:
-        :param mode:
-        :param data_reduction:
-        :param settings:
+        :param `Search.Settings` settings: a settings object, modify to change advance settings
         """
         if settings is None:
             self.settings = self.Settings()
@@ -133,9 +241,10 @@ class Search(object):
         """
 
 
-        :param pdb_code:
-        :param ligand:
-        :param reduction_procedure:
+        :param str pdb_code: PDB code to base the ensemble on
+        :param str ligand: ligand identifier (example format: STU_A_299)
+        :param str reduction_procedure: either bb_clustering, all_atom_clustering, ligand_driven_selection
+        :param str num_members: number of members in the ensemble
         :return:
         """
         self.settings.data['siena']["pdbCode"] = pdb_code
@@ -144,13 +253,8 @@ class Search(object):
         self.settings.data['reduction_procedure'] = reduction_procedure
         self.settings.data['siena'][reduction_procedure] = num_members  # reduction_procedure
 
-        self.results_url = self._post()
-        self._get()
-        self.results_url = self._post()
-        data = self._get()
-
-        return Ensemble(data)
-
+        results_url = self._post()
+        return Ensemble(self._get(results_url))
 
     def _run(self, cmd):
         """
@@ -172,39 +276,44 @@ class Search(object):
             .format(json.dumps(self.settings.data, ensure_ascii=True, indent=2, default=True),self.settings.url)
 
         response = ast.literal_eval(self._run(cmd))
+        print response
         return response['location']
 
-    def _get(self):
+    def _get(self, results_url):
         """
         Collect the results using GET. May have to try multiple times.
 
         :return:
         """
-        cmd = """curl {}""".format(self.results_url)
+        cmd = """curl {}""".format(results_url)
 
         response = ast.literal_eval(self._run(cmd))
         if response["status_code"] == 400:
             print "status code: {}".format(response['status_code'])
             raise RuntimeError()
 
-        while response["status_code"] == 220:
+        status_code = int(response["status_code"])
+        while status_code > 200:
+            print "status code: {}".format(response['status_code'])
             time.sleep(10)
             response = ast.literal_eval(self._run(cmd))
+            status_code = int(response["status_code"])
 
         # create Ensemble
-        print "status code: {}".format(response['status_code'])
+
+        print type(response["status_code"])
         return response
 
 
 def main():
     searcher = Search()
-    ensemble = searcher.create_ensemble(pdb_code="1ia1",
-                                        ligand="TQ3_A_194",
-                                        reduction_procedure="all_atom_clustering",
+    ensemble = searcher.create_ensemble(pdb_code="1kzk",
+                                        ligand="JE2_A_701",
+                                        reduction_procedure="bb_clustering",
                                         num_members="5")
 
-    ensemble.save(out_dir = "/home/pcurran/patel/CDK2/1aq1_ensemble")
-
+    #ensemble.save(out_dir = "/home/pcurran/patel/CDK2/1aq1_ensemble")
+    ensemble.select_diverse_ligands(target="CDK2")
 
 if __name__ == "__main__":
     main()
